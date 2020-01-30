@@ -8,15 +8,15 @@
 #' @param keepDroplets Storing the full table of counts for all droplets uses a lot of space and is really only used to estimate the soup profile.  Therefore, it is dropped after the soup profile has been estimated unless this is set to \code{TRUE}.
 #' @return A modified version of \code{sc} with an extra \code{soupProfile} entry containing a data.frame with the soup profile and confidence limits for all genes.
 estimateSoup = function(sc,soupRange=c(0,10),keepDroplets=FALSE){
-  if(!is(sc,'SoupChannel'))
-    stop("sc must be a SoupChannel object.")
-  #Estimate the soup 
-  w = which(sc$nDropUMIs > soupRange[1] & sc$nDropUMIs < soupRange[2])
-  sc$soupProfile = data.frame(row.names=rownames(sc$tod),
-                              est = rowSums(sc$tod[,w,drop=FALSE])/sum(sc$tod[,w]),
-                              counts = rowSums(sc$tod[,w,drop=FALSE]))
-  #Saves a lot of space if we can drop the droplets now we're done with them
-  if(!keepDroplets)
-    sc$tod=NULL
-  return(sc)
+    if(!is(sc,'SoupChannel'))
+      stop("sc must be a SoupChannel object.")
+    #Estimate the soup 
+    w = which(sc$nDropUMIs > soupRange[1] & sc$nDropUMIs < soupRange[2]) # select column IDs of the soup droplets
+    sc$soupProfile = data.frame(row.names=rownames(sc$tod),
+                                est = rowSums(sc$tod[,w,drop=FALSE])/sum(sc$tod[,w]), # denominator sum is over cells ; sum(sc$tod[,w]) is over all genes 
+                                counts = rowSums(sc$tod[,w,drop=FALSE])) # the soup gene expression in all soup droplets
+    #Saves a lot of space if we can drop the droplets now we're done with them
+    if(!keepDroplets)
+      sc$tod=NULL
+    return(sc)
 }

@@ -116,54 +116,62 @@ plotMarkerDistribution = function(sc,nonExpressedGeneList,maxCells=150,...){
 #' @param useToEst A vector (usually obtained from \code{\link{estimateNonExpressingCells}}), that will be used to mark cells instead of the usual Poisson test.
 #' @return A ggplot2 containing the plot.
 plotMarkerMap = function(sc,geneSet,DR,ratLims=c(-2,2),FDR=0.05,useToEst=NULL){
-  if(!is(sc,'SoupChannel'))
-    stop("sc not a valid SoupChannel object.")
-  #Try and get DR if missing
-  if(missing(DR))
-    DR = sc$metaData[,sc$DR]
-  #Make sure DR is sensible
-  DR = as.data.frame(DR)
-  if(ncol(DR)<2)
-    stop("Need at least two reduced dimensions.")
-  if(!(all(rownames(DR) %in% colnames(sc$toc))))
-    stop("rownames of DR need to match column names of sc$toc")
-  #Get the ratio of observed to expected
-  obs = colSums(sc$toc[geneSet,,drop=FALSE])
-  exp = sc$metaData$nUMIs*sum(sc$soupProfile[geneSet,'est'])
-  expRatio = obs/exp
-  #Add it to the dimensions
-  DR$geneRatio = expRatio[rownames(DR)]
-  colnames(DR)[1:2] = c('RD1','RD2')
-  #Sanitise the values a little
-  tgtScale = c(ratLims[1],0,ratLims[2])
-  #Rescale to be between zero and 1
-  rescaled = (tgtScale-tgtScale[1])/(max(tgtScale)-tgtScale[1])
-  DR$logRatio = log10(DR$geneRatio)
-  #Keep -Inf as NA as we're not really interested in those that have zero expression
-  DR$logRatio[DR$logRatio < ratLims[1]] = ratLims[1]
-  DR$logRatio[DR$logRatio > ratLims[2]] = ratLims[2]
-  DR$logRatio[DR$geneRatio==0]=NA
-  #Calculate the corrected p-value of 
-  DR$qVals = p.adjust(ppois(obs-1,exp,lower.tail=FALSE),method='BH')[rownames(DR)]
-  colVal = 'qVals<FDR'
-  if(!is.null(useToEst)){
-    DR$useToEst = useToEst
-    colVal='useToEst'
-  }
-  #Create the plot
-  gg = ggplot(DR,aes(RD1,RD2)) +
-    #Stick NAs underneath
-    geom_point(data=DR[is.na(DR$logRatio),],aes_string(colour=colVal),size=0.25) +
-    geom_point(data=DR[!is.na(DR$logRatio),],aes_string(fill='logRatio',colour=colVal),size=2.0,shape=21,stroke=0.5) +
-    scale_colour_manual(values=c(`FALSE`='black',`TRUE`='#009933'))+
-    xlab('ReducedDim1') +
-    ylab('ReducedDim2') +
-    scale_fill_gradientn(colours = c('blue','white','red'),
-                        values = rescaled,
-                        guide='colorbar',
-                        limits=ratLims
-                        )
-    gg
+    if(!is(sc,'SoupChannel'))
+        stop("sc not a valid SoupChannel object.")
+    #Try and get DR if missing
+    if(missing(DR))
+        DR = sc$metaData[,sc$DR]
+    #Make sure DR is sensible
+    DR = as.data.frame(DR)
+    if(ncol(DR)<2)
+        stop("Need at least two reduced dimensions.")
+    if(!(all(rownames(DR) %in% colnames(sc$toc))))
+        stop("rownames of DR need to match column names of sc$toc")
+  
+
+    #Get the ratio of observed to expected
+    obs = colSums(sc$toc[geneSet,,drop=FALSE])
+    exp = sc$metaData$nUMIs*sum(sc$soupProfile[geneSet,'est'])
+    expRatio = obs/exp
+
+    #Add it to the dimensions
+    DR$geneRatio = expRatio[rownames(DR)]
+    colnames(DR)[1:2] = c('RD1','RD2')
+
+    #Sanitise the values a little
+    tgtScale = c(ratLims[1],0,ratLims[2])
+
+    #Rescale to be between zero and 1
+    rescaled = (tgtScale-tgtScale[1])/(max(tgtScale)-tgtScale[1])
+    DR$logRatio = log10(DR$geneRatio)
+
+    #Keep -Inf as NA as we're not really interested in those that have zero expression
+    DR$logRatio[DR$logRatio < ratLims[1]] = ratLims[1]
+    DR$logRatio[DR$logRatio > ratLims[2]] = ratLims[2]
+    DR$logRatio[DR$geneRatio==0]=NA
+
+    #Calculate the corrected p-value of 
+    DR$qVals = p.adjust(ppois(obs-1,exp,lower.tail=FALSE),method='BH')[rownames(DR)]
+    colVal = 'qVals<FDR'
+    if(!is.null(useToEst)){
+        DR$useToEst = useToEst
+        colVal='useToEst'
+    }
+
+    #Create the plot
+    gg = ggplot(DR,aes(RD1,RD2)) +
+      #Stick NAs underneath
+      geom_point(data=DR[is.na(DR$logRatio),],aes_string(colour=colVal),size=0.25) +
+      geom_point(data=DR[!is.na(DR$logRatio),],aes_string(fill='logRatio',colour=colVal),size=2.0,shape=21,stroke=0.5) +
+      scale_colour_manual(values=c(`FALSE`='black',`TRUE`='#009933'))+
+      xlab('ReducedDim1') +
+      ylab('ReducedDim2') +
+      scale_fill_gradientn(colours = c('blue','white','red'),
+                          values = rescaled,
+                          guide='colorbar',
+                          limits=ratLims
+                          )
+      gg
 }
 
 #' Plot maps comparing corrected/raw expression

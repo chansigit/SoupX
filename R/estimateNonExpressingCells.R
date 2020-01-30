@@ -19,49 +19,60 @@
 #' @seealso calculateContaminationFraction plotMarkerMap
 #' @return A matrix indicating which cells to be used to estimate contamination for each set of genes.  Typically passed to the \code{useToEst} parameter of \code{\link{calculateContaminationFraction}} or \code{\link{plotMarkerMap}}.
 estimateNonExpressingCells = function(sc,nonExpressedGeneList,clusters=NULL,maximumContamination=1.0,pCut=0.05){
-  if(!is(sc,'SoupChannel'))
-    stop("sc is not a valid SoupChannel object")
-  #Get clusters if they exist, if they don't, set to individual cells
-  if(is.null(clusters)){
-    if('clusters' %in% colnames(sc$metaData)){
-      clusters = setNames(as.character(sc$metaData$clusters),rownames(sc$metaData))
+    if(!is(sc,'SoupChannel'))
+        stop("sc is not a valid SoupChannel object")
+
+        
+    #Get clusters if they exist, if they don't, set to individual cells
+    if(is.null(clusters)){
+        if('clusters' %in% colnames(sc$metaData)){
+            clusters = setNames(as.character(sc$metaData$clusters),rownames(sc$metaData))
+        }
     }
-  }
-  #Using each cell as its own cluster
-  if(is.null(clusters) || (length(clusters)==1 && clusters==FALSE)){
-      message("No clusters found or supplied, using every cell as its own cluster.")
-      clusters = setNames(rownames(sc$metaData),rownames(sc$metaData))
-  }
-  #Check we have coverage of everything
-  if(!all(colnames(sc$toc) %in% names(clusters)))
-    stop("Invalid cluster specification.  clusters must be a named vector with all column names in the table of counts appearing.")
-  #Convert gene list to genuine list if vector
-  if(!is.list(nonExpressedGeneList))
-    stop("nonExpressedGeneList must be a list of sets of genes.  e.g. list(HB = c('HBB','HBA2'))")
-  #Now work out which clusters to use which genes on 
-  tgtGns = unique(unlist(nonExpressedGeneList))
-  dat = sc$toc[tgtGns,,drop=FALSE]
-  cnts = do.call(rbind,lapply(nonExpressedGeneList,function(e) colSums(dat[e,,drop=FALSE])))
-  #Work out how many counts we'd expect if the cell were maximally contaminated and all expression came from the contamination
-  exp = outer(sc$soupProfile[tgtGns,'est'],sc$metaData$nUMIs*maximumContamination)
-  colnames(exp) = colnames(cnts)
-  rownames(exp) = tgtGns
-  exp = do.call(rbind,lapply(nonExpressedGeneList,function(e) colSums(exp[e,,drop=FALSE])))
-  #Identify those cells where a gene is definitely expressed
-  s = split(names(clusters),clusters)
-  clustExp = ppois(cnts-1,exp,lower.tail=FALSE)
-  clustExp = do.call(rbind,lapply(s,function(e) apply(clustExp[,e,drop=FALSE],1,min)))
-  clustExp = clustExp>=pCut
-  #Expand it out into a full cell matrix
-  clustExp = clustExp[match(clusters,rownames(clustExp)),,drop=FALSE]
-  rownames(clustExp) = names(clusters)
-  #Check that we actually got som
-  if(sum(clustExp)==0){
-    warning("No non-expressing cells identified.  Consider setting clusters=FALSE, increasing maximumContamination and/or pCut.")
-  }
-  #A small number found
-  if(sum(clustExp)>0 && sum(clustExp)<100){
-    warning("Fewer than 100 non-expressing cells identified.  The estimation of the contamination fraction may be inaccurate.  Consider setting clusters=FALSE, increasing maximumContamination and/or pCut.")
-  }
-  return(clustExp)
+    #Using each cell as its own cluster
+    if(is.null(clusters) || (length(clusters)==1 && clusters==FALSE)){
+        message("No clusters found or supplied, using every cell as its own cluster.")
+        clusters = setNames(rownames(sc$metaData),rownames(sc$metaData))
+    }
+    #Check we have coverage of everything
+    if(!all(colnames(sc$toc) %in% names(clusters)))
+        stop("Invalid cluster specification.  clusters must be a named vector with all column names in the table of counts appearing.")
+    #Convert gene list to genuine list if vector
+    if(!is.list(nonExpressedGeneList))
+        stop("nonExpressedGeneList must be a list of sets of genes.  e.g. list(HB = c('HBB','HBA2'))")
+
+    #Now work out which clusters to use which genes on 
+    tgtGns = unique(unlist(nonExpressedGeneList))
+    dat = sc$toc[tgtGns,,drop=FALSE]
+    cnts = do.call(rbind,lapply(nonExpressedGeneList,function(e) colSums(dat[e,,drop=FALSE])))
+
+    #Work out how many counts we'd expect if the cell were maximally contaminated and all expression came from the contamination
+    exp = outer(sc$soupProfile[tgtGns,'est'],sc$metaData$nUMIs*maximumContamination)
+    colnames(exp) = colnames(cnts)
+    rownames(exp) = tgtGns
+    exp = do.call(rbind,lapply(nonExpressedGeneList,function(e) colSums(exp[e,,drop=FALSE])))
+
+    #Identify those cells where a gene is definitely expressed
+    s = split(names(clusters),clusters)
+    clustExp = ppois(cnts-1,exp,lower.tail=FALSE)
+    clustExp = do.call(rbind,lapply(s,function(e) apply(clustExp[,e,drop=FALSE],1,min)))
+    clustExp = clustExp>=pCut
+
+
+    #Expand it out into a full cell matrix
+    clustExp = clustExp[match(clusters,rownames(clustExp)),,drop=FALSE]
+    rownames(clustExp) = names(clusters)
+
+
+    #Check that we actually got som
+    if(sum(clustExp)==0){
+       warning("No non-expressing cells identified.  Consider setting clusters=FALSE, increasing maximumContamination and/or pCut.")
+    }
+
+
+    #A small number found
+    if(sum(clustExp)>0 && sum(clustExp)<100){
+       warning("Fewer than 100 non-expressing cells identified.  The estimation of the contamination fraction may be inaccurate.  Consider setting clusters=FALSE, increasing maximumContamination and/or pCut.")
+    }
+    return(clustExp)
 }
