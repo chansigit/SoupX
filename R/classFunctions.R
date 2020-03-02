@@ -13,27 +13,32 @@
 #' @importFrom Matrix colSums
 #' @seealso SoupChannelList estimateSoup
 SoupChannel = function(tod,toc,metaData=NULL,soupRange=c(0,10),keepDroplets=FALSE,...){
-  if(!is.null(metaData) & !all(sort(colnames(toc))==sort(rownames(metaData))))
-    stop("Rownames of metaData must match column names of table of counts.")
-  #Munge everything into a list
-  out = list(tod=tod,toc=toc)
-  out = c(out,list(...))
-  #Create the metadata object
-  out$metaData = data.frame(row.names=colnames(toc),
-                            nUMIs = colSums(toc)
-                            )
-  #Merge in supplied metaData if it's present
-  if(!is.null(metaData)){
-    #Drop nUMIs if it exists
-    metaData = metaData[,colnames(metaData)!='nUMIs',drop=FALSE]
-    out$metaData = cbind(out$metaData,metaData)
-  }
-  #Get the droplet UMIs as well, as that's a useful thing to have
-  out$nDropUMIs = colSums(tod)
-  class(out) = c('list','SoupChannel')
-  #Estimate the soup
-  out = estimateSoup(out,soupRange=soupRange,keepDroplets=keepDroplets)
-  return(out)
+    if(!is.null(metaData) & !all(sort(colnames(toc))==sort(rownames(metaData))))
+        stop("Rownames of metaData must match column names of table of counts.")
+    
+    #Munge everything into a list
+    out = list(tod=tod,toc=toc)
+    out = c(out,list(...))
+    
+    #Create the metadata object
+    out$metaData = data.frame(row.names=colnames(toc),
+                              nUMIs = colSums(toc)
+                              )
+    
+    #Merge in supplied metaData if it's present
+    if(!is.null(metaData)){
+        #Drop nUMIs if it exists
+        metaData = metaData[,colnames(metaData)!='nUMIs',drop=FALSE]
+        out$metaData = cbind(out$metaData,metaData)
+    }
+
+    #Get the droplet UMIs as well, as that's a useful thing to have
+    out$nDropUMIs = colSums(tod)
+    class(out) = c('list','SoupChannel')
+    
+    #Estimate the soup
+    out = estimateSoup(out,soupRange=soupRange,keepDroplets=keepDroplets)
+    return(out)
 }
 
 #' Print method for SoupChannel
